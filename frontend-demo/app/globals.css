@@ -1,0 +1,176 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@300;400;500;600&display=swap");
+@import "tailwindcss";
+
+/* =============================================
+   ChatVector Design Tokens (dark)
+   - Background: #0d1210 (soft charcoal, subtle green undertone)
+   - Surface:    #121816
+   - Border:     #202a26
+   - Text:       #e7ebe8
+   - Muted:      #a1aaa5
+   - Subtle:     #46514c (tertiary text — between border and muted)
+   - Accent:     #D0A15B (warm gold — selective emphasis)
+   - Blue:       #4f91d9 (restrained secondary accent)
+   ============================================= */
+
+:root {
+  --background: #0d1210;
+  --foreground: #e7ebe8;
+  --surface: #121816;
+  --border: #202a26;
+  --muted: #a1aaa5;
+  --subtle: #46514c;
+  --accent: #D0A15B;
+  --accent-text: #D0A15B;
+  --blue: #4f91d9;
+  --success: #659b7a;
+  --success-text: #7aad8f;
+  --info: #4f7fae;
+  --danger: #c75b5b;
+  --danger-text: #d97070;
+  --user-bubble-bg: color-mix(in srgb, var(--accent) 10%, transparent);
+  --user-bubble-border: color-mix(in srgb, var(--accent) 28%, transparent);
+  --syntax-keyword: #ff7b72;
+  --syntax-string: #a5d6ff;
+  --syntax-function: #79c0ff;
+  --syntax-comment: #8b949e;
+  --syntax-default: #c9d1d9;
+  --syntax-variable: #ffa657;
+  /* Theme-invariant token — code blocks always render on a dark surface */
+  --code-bg: #101513;
+  /* Nav scrim — opacity background that tracks the active theme */
+  --nav-bg: rgba(13, 18, 16, 0.9);
+  /* Text on filled accent surfaces (CTAs, badges, toggles) */
+  --accent-foreground: #0d1210;
+  --headline-gradient: linear-gradient(
+    90deg,
+    var(--accent) 0%,
+    var(--blue) 100%
+  );
+}
+
+[data-theme="light"] {
+  --background: #f6f5f1;
+  --foreground: #171b19;
+  --surface: #fbfaf7;
+  --border: #d9ded8;
+  --muted: #68716c;
+  --subtle: #a5ada8;
+  --accent: #D0A15B;
+  --accent-text: #A97830;
+  --blue: #4f7fae;
+  --success: #659b7a;
+  --success-text: #4d7a62;
+  --info: #4f7fae;
+  --danger: #c75b5b;
+  --danger-text: #a84848;
+  --user-bubble-bg: color-mix(in srgb, var(--accent) 10%, transparent);
+  --user-bubble-border: color-mix(in srgb, var(--accent-text) 22%, transparent);
+  --nav-bg: rgba(246, 245, 241, 0.9);
+  --accent-foreground: #171b19;
+  --headline-gradient: linear-gradient(
+    90deg,
+    #d0a15b 0%,
+    #7f8fa3 55%,
+    #4f86bd 100%
+  );
+  --syntax-keyword: #ff7b72;
+  --syntax-string: #a5d6ff;
+  --syntax-function: #79c0ff;
+  --syntax-comment: #8b949e;
+  --syntax-default: #c9d1d9;
+  --syntax-variable: #ffa657;
+}
+
+@theme inline {
+  /* Colors — semantic tokens */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-blue: var(--blue);
+  --color-success: var(--success);
+  --color-success-text: var(--success-text);
+  --color-info: var(--info);
+  --color-danger: var(--danger);
+  --color-danger-text: var(--danger-text);
+  --color-code-bg: var(--code-bg);
+
+  /* Fonts */
+  --font-sans: "DM Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@layer base {
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [role="button"]:focus-visible,
+  [role="link"]:focus-visible,
+  [role="menuitem"]:focus-visible,
+  [role="tab"]:focus-visible,
+  [tabindex]:not([tabindex="-1"]):focus-visible {
+    @apply outline-none ring-2 ring-accent/50 ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  .nav-link-active {
+    position: relative;
+    color: var(--foreground);
+  }
+
+  .nav-link-active::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -7px;
+    width: 65%;
+    height: 2px;
+    transform: translateX(-50%);
+    background: var(--accent);
+    border-radius: 999px;
+  }
+
+  .text-headline-gradient {
+    background-image: var(--headline-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .chat-bubble-user {
+    background: var(--user-bubble-bg);
+    border: 1px solid var(--user-bubble-border);
+    color: var(--foreground);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
+}

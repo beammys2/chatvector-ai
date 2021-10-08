@@ -1,0 +1,52 @@
+site_name: ChatVector Documentation
+site_description: Developer documentation for the ChatVector RAG engine
+repo_url: https://github.com/chatvector-ai/chatvector-ai
+repo_name: chatvector-ai/chatvector-ai
+edit_uri: edit/main/documentation/content/
+docs_dir: content
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - search.suggest
+    - content.code.copy
+
+plugins:
+  - search
+  - swagger-ui-tag
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - API Reference: api-reference.md
+  - SDKs:
+    - Python: sdk/python.md
+    - TypeScript: sdk/typescript.md
+  - Deployment: deployment.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+extra:
+  generator: false

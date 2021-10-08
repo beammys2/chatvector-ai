@@ -1,0 +1,324 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Apply database schema
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: |
+          set -euo pipefail
+          for f in $(ls backend/db/init/*.sql | sort); do
+            psql -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Run backend tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
+          APP_ENV: test
+          GEN_AI_KEY: test-key-for-ci
+          PYTHONPATH: backend
+          # Logical DB 15 is isolated from API traffic; tests flush this DB between cases
+          REDIS_URL: redis://localhost:6379/15
+        run: |
+          cd backend
+          pytest tests/ -v --tb=short
+
+  prod-auth-smoke:
+    name: Production Auth Smoke Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Apply database schema
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: |
+          set -euo pipefail
+          for f in $(ls backend/db/init/*.sql | sort); do
+            psql -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Run production-mode auth smoke tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
+          APP_ENV: production
+          GEN_AI_KEY: test-key-for-ci
+          PYTHONPATH: backend
+        run: |
+          cd backend
+          pytest tests/test_prod_auth_smoke.py -v --tb=short
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build ./backend -t chatvector-api:ci
+
+  frontend:
+    name: Frontend Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend-demo/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend-demo
+          npm ci
+
+      - name: Lint and Type-check
+        run: |
+          cd frontend-demo
+          npm run lint
+          npm run type-check
+
+      - name: Build
+        run: |
+          cd frontend-demo
+          npm run build
+
+  sdk:
+    name: SDK Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: sdk/python/pyproject.toml
+
+      - name: Install SDK
+        run: |
+          cd sdk/python
+          pip install -e ".[dev]"
+
+      - name: Run SDK tests
+        run: |
+          cd sdk/python
+          pytest tests/ -v --tb=short
+
+  docs:
+    name: Documentation Site
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            documentation/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install -r documentation/requirements.txt
+
+      - name: Export OpenAPI schema
+        env:
+          APP_ENV: test
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
+          GEN_AI_KEY: docs-export-key
+        run: python documentation/scripts/export_openapi.py
+
+      - name: Build documentation site
+        run: mkdocs build -f documentation/mkdocs.yml --strict
+
+  typescript-sdk:
+    name: TypeScript SDK (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["22", "24"]
+
+    defaults:
+      run:
+        working-directory: sdk/typescript
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run type-check
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Build package
+        run: npm run build
+
+      - name: Test package exports
+        run: npm run test:exports
+ 
+  prod-compose-e2e:
+    name: Production Compose E2E Smoke Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check E2E prerequisites
+        id: e2e-prereqs
+        env:
+          GEN_AI_KEY: ${{ secrets.GEN_AI_KEY }}
+        run: |
+          if [ -z "${GEN_AI_KEY}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping production E2E — GEN_AI_KEY secret is not configured."
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run production Compose E2E smoke test
+        if: steps.e2e-prereqs.outputs.enabled == 'true'
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/postgres
+          REDIS_URL: redis://redis:6379/0
+          APP_ENV: production
+          LLM_PROVIDER: ${{ vars.CI_LLM_PROVIDER }}
+          LLM_MODEL: ${{ vars.CI_LLM_MODEL }}
+          EMBEDDING_PROVIDER: ${{ vars.CI_EMBEDDING_PROVIDER }}
+          EMBEDDING_MODEL: ${{ vars.CI_EMBEDDING_MODEL }}
+          GEN_AI_KEY: ${{ secrets.GEN_AI_KEY }}
+          QUEUE_BACKEND: redis
+          QUEUE_WORKER_COUNT: 3
+          LOG_LEVEL: INFO
+        run: |
+          chmod +x scripts/prod-e2e-smoke.sh
+          ./scripts/prod-e2e-smoke.sh
+
+      - name: Show production stack logs on failure
+        if: failure()
+        run: |
+          docker compose -f docker-compose.prod.yml ps
+          docker compose -f docker-compose.prod.yml logs --no-color
+
+      - name: Clean up production stack
+        if: always()
+        run: |
+          docker compose -f docker-compose.prod.yml down -v --remove-orphans

@@ -1,0 +1,61 @@
+import logging
+import db
+from db.base import ChunkRecord
+
+
+logger = logging.getLogger(__name__)
+
+# Note: ingest_document_atomic is only referenced from tests (test_upload_atomic.py).
+# Production ingestion uses IngestionPipeline + queue workers +
+# db.create_document_with_chunks_atomic directly; this helper is not wired to any route.
+# Keep for tests; wire from a service if a non-queued synchronous API is ever needed.
+
+async def ingest_document_atomic(
+    file_name: str,
+    chunks: list[str],
+    embeddings: list[list[float]],
+    tenant_id: str,
+) -> tuple[str, list[str]]:
+    """
+    Persist document + chunks as one logical operation.
+
+    Test helper only — production ingestion uses IngestionPipeline + queue workers.
+    """
+    from db.tenant_scope import require_tenant_id
+
+    tenant_id = require_tenant_id(tenant_id, method="create_document_with_chunks_atomic")
+    if len(chunks) != len(embeddings):
+        raise ValueError(
+            f"Number of chunks ({len(chunks)}) does not match number of embeddings ({len(embeddings)})"
+        )
+
+    if not chunks:
+        raise ValueError("No content chunks were generated from the uploaded file.")
+
+    cursor = 0
+    chunk_records: list[ChunkRecord] = []
+    for idx, (chunk_text, embedding) in enumerate(zip(chunks, embeddings)):
+        start = cursor
+        end = start + len(chunk_text)
+        chunk_records.append(
+            ChunkRecord(
+                chunk_text=chunk_text,
+                embedding=embedding,
+                chunk_index=idx,
+                character_offset_start=start,
+                character_offset_end=end,
+                page_number=None,
+            )
+        )
+        cursor = end
+
+    doc_id, inserted_chunk_ids = await db.create_document_with_chunks_atomic(
+        file_name=file_name,
+        chunk_records=chunk_records,
+        tenant_id=tenant_id,
+    )
+
+    logger.info(
+        f"Successfully atomically ingested {len(inserted_chunk_ids)} chunks for document {doc_id}"
+    )
+    return doc_id, inserted_chunk_ids

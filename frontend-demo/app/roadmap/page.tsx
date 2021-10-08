@@ -1,0 +1,163 @@
+import Link from "next/link";
+import { DocLayout } from "@/app/components/DocLayout";
+import { DocPageHeader } from "@/app/components/DocPageHeader";
+
+type Phase = {
+  number: string;
+  title: string;
+  status: string;
+  statusStyles: string;
+  description: string;
+  completedItems?: string[];
+  remainingItems?: string[];
+};
+
+const phases: Phase[] = [
+  {
+    number: "Phase 1",
+    title: "Stabilize & Optimize Core Engine",
+    status: "Complete",
+    statusStyles: "bg-accent text-accent-foreground",
+    description:
+      "Core RAG backend hardened for reliability, observability, and performance. Shipped features include a robust ingestion pipeline, centralized retry logic, and built-in observability.",
+  },
+  {
+    number: "Phase 2",
+    title: "Enhance Developer Experience",
+    status: "Complete",
+    statusStyles: "bg-accent text-accent-foreground",
+    description:
+      "Expanded flexibility and developer experience: advanced chunking, query transformations, pluggable providers, Python SDK, production Docker Compose, CI, and the frontend demo.",
+  },
+  {
+    number: "Phase 2.5",
+    title: "Hardening & Consistency",
+    status: "Complete",
+    statusStyles: "bg-accent text-accent-foreground",
+    description:
+      "Stabilization pass ahead of Phase 3: unified API error contracts, provider timeout standardization, embedding validation, logging safety, and expanded test coverage.",
+  },
+  {
+    number: "Phase 3",
+    title: "Platform Evolution",
+    status: "Mostly Shipped",
+    statusStyles: "bg-blue text-white",
+    description:
+      "Transform ChatVector into a multi-tenant, session-aware document intelligence backend. API-key auth, tenant isolation, Python and TypeScript SDKs, hybrid retrieval, component score metadata, and the expanded frontend demo are shipped. Remaining work focuses on frontend chat SSE wiring, distributed rate-limit storage, and API-key lifecycle automation.",
+    completedItems: [
+      "Bearer API-key authentication and strict tenant isolation in production",
+      "Per-tenant rate limiting and DEV_TENANT_ID bootstrap in development",
+      "SQLAlchemy/PostgreSQL via DATABASE_URL (Supabase HTTP client removed)",
+      "Durable session-based chat with persisted history and explicit session endpoints",
+      "SSE streaming chat with structured complete events (citations, latency_ms, model)",
+      "Query transformations with session-history context",
+      "Redis ingestion queue as production default",
+      "Hybrid retrieval (full-text + vector, RRF) and baseline reranking",
+      "Session-scoped and tenant-wide retrieval modes",
+      "Anthropic Claude and Voyage AI provider support",
+      "Citation relevance scores, score types, and component score breakdown in inspector",
+      "Python SDK: sessions, streaming, retrieval scopes",
+      "TypeScript SDK: upload, chat, batch, sessions, streaming",
+      "CLI list/revoke API keys alongside create-tenant-key",
+      "Migration ledger for numbered SQL migrations",
+      "Frontend demo: chat, batch compare/synthesize, status, retrieval inspector",
+    ],
+    remainingItems: [
+      "Frontend demo chat SSE streaming (backend ready; UI uses POST /chat)",
+      "Redis-backed distributed rate-limit storage across workers",
+      "API-key lifecycle automation beyond CLI (rotation, expiration)",
+    ],
+  },
+];
+
+export default function RoadmapPage() {
+  return (
+    <DocLayout>
+      <DocPageHeader
+        kicker="future outlook"
+        title="Roadmap"
+        description="Phased delivery from stabilizing the core engine through platform evolution and ecosystem growth."
+      />
+
+      <h2 className="sr-only">Development phases</h2>
+      <div className="mt-12 grid gap-6">
+        {phases.map((phase, i) => (
+          <section
+            key={i}
+            className="rounded-r-xl border border-border border-l-[3px] border-l-accent bg-surface p-8 shadow-sm"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <span className="text-[0.7rem] uppercase tracking-widest text-accent-text/80 font-mono">
+                {phase.number}
+              </span>
+              <span
+                className={`rounded-full px-3 py-1 text-[0.65rem] font-bold uppercase tracking-wider ${phase.statusStyles}`}
+              >
+                {phase.status}
+              </span>
+            </div>
+
+            <h3 className="mb-3 text-xl font-semibold text-foreground">
+              {phase.title}
+            </h3>
+
+            <p className="text-[1rem] leading-[1.8] text-foreground/90">
+              {phase.description}
+            </p>
+
+            {phase.completedItems && phase.completedItems.length > 0 && (
+              <div className="mt-6">
+                <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide text-accent-text/80">
+                  Shipped
+                </h4>
+                <ul className="list-inside list-disc space-y-1 text-[0.95rem] leading-relaxed text-foreground/85">
+                  {phase.completedItems.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {phase.remainingItems && phase.remainingItems.length > 0 && (
+              <div className="mt-6">
+                <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide text-foreground/70">
+                  Remaining
+                </h4>
+                <ul className="list-inside list-disc space-y-1 text-[0.95rem] leading-relaxed text-foreground/85">
+                  {phase.remainingItems.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        ))}
+      </div>
+
+      <div className="mt-16 flex flex-col gap-6 border-t border-border pt-8">
+        <div>
+          <p className="mb-2 text-sm text-foreground/80">
+            Want to see what we&apos;re building right now?
+          </p>
+          <Link
+            href="https://github.com/orgs/chatvector-ai/projects/1"
+            className="inline-flex items-center gap-2 font-medium text-accent-text transition-colors hover:text-accent-text/80"
+          >
+            Check the ChatVector-AI Development Board →
+          </Link>
+        </div>
+
+        <p className="border-l border-border pl-4 text-sm italic text-foreground/80">
+          For full roadmap details, see{" "}
+          <Link
+            href="https://github.com/chatvector-ai/chatvector-ai/blob/main/ROADMAP.md"
+            className="underline transition-colors hover:text-foreground"
+          >
+            ROADMAP.md on GitHub
+          </Link>
+          .
+        </p>
+      </div>
+    </DocLayout>
+  );
+}

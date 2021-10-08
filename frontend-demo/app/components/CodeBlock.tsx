@@ -1,0 +1,46 @@
+import React from "react";
+interface CodeBlockProps {
+  filename?: string;
+  language?: "python" | "bash" | "sql" | "text";
+  code?: string;
+  children?: React.ReactNode;
+  showLineNumbers?: boolean;
+  className?: string;
+}
+const CodeBlock = ({
+  filename,
+  children,
+  language,
+  code,
+  className,
+}: CodeBlockProps) => {
+  if (filename) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-border bg-code-bg">
+        <div className="flex items-center gap-2 border-b border-border bg-surface px-4 py-3">
+          {/* macOS traffic-light dots — intentional non-token colors */}
+          <div className="size-2.5 rounded-full bg-[rgb(255,95,87)]" />
+          <div className="size-2.5 rounded-full bg-[rgb(254,188,46)]" />
+          <div className="size-2.5 rounded-full bg-[rgb(40,200,64)]" />
+          <span className="ml-auto font-mono text-xs text-muted">
+            {filename}
+          </span>
+        </div>
+        <pre
+          className={`text-(--syntax-default) m-0 overflow-x-auto px-6 py-5 font-mono text-[0.82rem] leading-[1.75] ${className || ""} ${
+            language ? `language-${language}` : ""
+          }`}
+        >
+          {children}
+        </pre>
+      </div>
+    );
+  } else {
+    return (
+      <pre className="bg-surface border border-border rounded-xl font-mono text-[0.82rem] p-4 overflow-x-auto">
+        <code>{code}</code>
+      </pre>
+    );
+  }
+};
+export default CodeBlock;
